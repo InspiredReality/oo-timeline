@@ -4,11 +4,12 @@
       "timestamp": "2024-01-7",
       "x": -50,
       "y": 10,
-      "z": 0,
+      "z": 50,
       "color": "#ff6b6b",
       "count": 145,
       "label": "Group A Discovered",
-      "size": 14.5
+      "size": 14.5,
+      "shape": "icosahedron"
 
     },
     {
@@ -19,7 +20,9 @@
       "color": "#4ecdc4",
       "count": -100,
       "label": "Group A Resolved",
-      "size": 10
+      "size": 10,
+      "shape": "tetrahedron"
+
     },
     {
       "timestamp": "2024-03-15",
@@ -29,7 +32,9 @@
       "color": "#45b7d1",
       "count": 203,
       "label": "Server Group A",
-      "size": 2
+      "size": 2,
+      "shape": "octahedron"
+
     },
     {
       "timestamp": "2024-04-20",
@@ -39,7 +44,8 @@
       "color": "#f7b731",
       "count": 156,
       "label": "Server Group C",
-      "size": 3
+      "size": 3,
+      "shape": "cylinder"      
     },
     {
       "timestamp": "2024-05-10",
@@ -48,7 +54,9 @@
       "z": -5,
       "color": "#5f27cd",
       "count": 189,
-      "label": "Server Group B"
+      "label": "Server Group B",
+      "size": 4,
+      "shape": "cone"
     }
   ],
   "events": [
