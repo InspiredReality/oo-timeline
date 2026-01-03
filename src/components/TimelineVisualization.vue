@@ -29,58 +29,102 @@
   // Three.js objects
   let scene, camera, renderer, controls
   let dataPoints = []
-  
-  // Sample data - your FastAPI would provide this
-  const sampleData = [
-    {
-      timestamp: new Date('2024-01-15'),
-      x: -50, y: 10, z: 0,
-      color: '#ff6b6b',
-      count: 145,
-      label: 'Server Group A'
-    },
-    {
-      timestamp: new Date('2024-02-01'),
-      x: -25, y: 25, z: 10,
-      color: '#4ecdc4',
-      count: 178,
-      label: 'Server Group B'
-    },
-    {
-      timestamp: new Date('2024-03-15'),
-      x: 0, y: 15, z: -10,
-      color: '#45b7d1',
-      count: 203,
-      label: 'Server Group A'
-    },
-    {
-      timestamp: new Date('2024-04-20'),
-      x: 25, y: 30, z: 5,
-      color: '#f7b731',
-      count: 156,
-      label: 'Server Group C'
-    },
-    {
-      timestamp: new Date('2024-05-10'),
-      x: 50, y: 20, z: -5,
-      color: '#5f27cd',
-      count: 189,
-      label: 'Server Group B'
+  let resizeObserver = null
+
+  // Data will be loaded from JSON file
+  const sampleData = ref([])
+  const qualitativeEvents = ref([])
+
+  // Load data from JSON file
+  async function loadData() {
+    try {
+      const response = await fetch('/data.json')
+      const jsonData = await response.json()
+
+      // Parse timestamps as Date objects
+      sampleData.value = jsonData.data.map(item => ({
+        ...item,
+        timestamp: new Date(item.timestamp)
+      }))
+
+      // Parse qualitative events
+      qualitativeEvents.value = (jsonData.events || []).map(item => ({
+        ...item,
+        timestamp: new Date(item.timestamp)
+      }))
+
+      // Initialize visualizations after data is loaded
+      if (sampleData.value.length > 0) {
+        createDataPoints()
+        initTimeline()
+
+        // Emit data to parent component (include events)
+        emit('data-updated', { data: sampleData.value, events: qualitativeEvents.value })
+      }
+    } catch (error) {
+      console.error('Error loading data:', error)
+      // Fallback to sample data if file not found
+      useFallbackData()
     }
-  ]
-  
-  const qualitativeEvents = [
-    {
-      timestamp: new Date('2024-02-15'),
-      title: 'New SLA Policy',
-      description: '24hr response time for critical findings'
-    },
-    {
-      timestamp: new Date('2024-04-01'),
-      title: 'Company Acquisition',
-      description: 'Merged TechCorp infrastructure'
-    }
-  ]
+  }
+
+  // Fallback sample data
+  function useFallbackData() {
+    sampleData.value = [
+      {
+        timestamp: new Date('2024-01-15'),
+        x: -50, y: 10, z: 0,
+        color: '#ff6b6b',
+        count: 145,
+        label: 'Server Group A'
+      },
+      {
+        timestamp: new Date('2024-02-01'),
+        x: -25, y: 25, z: 10,
+        color: '#4ecdc4',
+        count: 178,
+        label: 'Server Group B'
+      },
+      {
+        timestamp: new Date('2024-03-15'),
+        x: 0, y: 15, z: -10,
+        color: '#45b7d1',
+        count: 203,
+        label: 'Server Group A'
+      },
+      {
+        timestamp: new Date('2024-04-20'),
+        x: 25, y: 30, z: 5,
+        color: '#f7b731',
+        count: 156,
+        label: 'Server Group C'
+      },
+      {
+        timestamp: new Date('2024-05-10'),
+        x: 50, y: 20, z: -5,
+        color: '#5f27cd',
+        count: 189,
+        label: 'Server Group B'
+      }
+    ]
+
+    qualitativeEvents.value = [
+      {
+        timestamp: new Date('2024-02-15'),
+        title: 'New SLA Policy',
+        description: '24hr response time for critical findings'
+      },
+      {
+        timestamp: new Date('2024-04-01'),
+        title: 'Company Acquisition',
+        description: 'Merged TechCorp infrastructure'
+      }
+    ]
+
+    createDataPoints()
+    initTimeline()
+    emit('data-updated', { data: sampleData.value, events: qualitativeEvents.value })
+  }
   
   // Initialize Three.js scene
   function initThreeJS() {
@@ -124,17 +168,14 @@
     // Grid helper for reference
     const gridHelper = new THREE.GridHelper(200, 20, 0x444444, 0x222222)
     scene.add(gridHelper)
-    
-    // Create data points
-    createDataPoints()
-    
+
     // Animation loop
     animate()
   }
-  
+
   // Create 3D objects from data
   function createDataPoints() {
-    sampleData.forEach(data => {
+    sampleData.value.forEach(data => {
       // Sphere geometry
       const geometry = new THREE.SphereGeometry(2, 32, 32)
       const material = new THREE.MeshStandardMaterial({
@@ -191,8 +232,8 @@
     const margin = { top: 20, right: 50, bottom: 30, left: 50 }
     // Make timeline wider for scrolling - use a minimum width that's larger than viewport
     const minTimelineWidth = 1500
-    const viewportWidth = window.innerWidth - margin.left - margin.right
-    const width = Math.max(minTimelineWidth, viewportWidth)
+    const containerWidth = timelineContainer.value.clientWidth - margin.left - margin.right
+    const width = Math.max(minTimelineWidth, containerWidth)
     const height = 150 - margin.top - margin.bottom
 
     const svg = d3.select(timelineSvg.value)
@@ -204,36 +245,75 @@
 
     // Time scale
     const xScale = d3.scaleTime()
-      .domain(d3.extent(sampleData, d => d.timestamp))
+      .domain(d3.extent(sampleData.value, d => d.timestamp))
       .range([0, width])
 
-    // Y scale for quantitative data
+    // Y scale for quantitative data - include both positive and negative values
+    const minCount = d3.min(sampleData.value, d => d.count)
+    const maxCount = d3.max(sampleData.value, d => d.count)
     const yScale = d3.scaleLinear()
-      .domain([0, d3.max(sampleData, d => d.count)])
+      .domain([Math.min(0, minCount), Math.max(0, maxCount)])
       .range([height, 0])
 
-    // Axis - show more ticks since we have more space
-    const xAxis = d3.axisBottom(xScale)
-      .ticks(10)
-      .tickFormat(d3.timeFormat('%b %Y'))
-    
-    g.append('g')
+    // Create axis group at zero line
+    const zeroY = yScale(0)
+    const axisGroup = g.append('g')
       .attr('class', 'x-axis')
-      .attr('transform', `translate(0,${height})`)
-      .call(xAxis)
-      .selectAll('text')
+      .attr('transform', `translate(0,${zeroY})`)
+
+    // Add axis line
+    axisGroup.append('line')
+      .attr('x1', 0)
+      .attr('x2', width)
+      .attr('y1', 0)
+      .attr('y2', 0)
+      .attr('stroke', '#666')
+
+    // Generate month boundaries
+    const [minDate, maxDate] = d3.extent(sampleData.value, d => d.timestamp)
+    const monthBoundaries = d3.timeMonth.range(
+      d3.timeMonth.floor(minDate),
+      d3.timeMonth.offset(d3.timeMonth.ceil(maxDate), 1)
+    )
+
+    // Add tick marks at month boundaries (start of each month)
+    axisGroup.selectAll('.boundary-tick')
+      .data(monthBoundaries)
+      .enter()
+      .append('line')
+      .attr('class', 'boundary-tick')
+      .attr('x1', d => xScale(d))
+      .attr('x2', d => xScale(d))
+      .attr('y1', -5)
+      .attr('y2', 25)
+      .attr('stroke', '#666')
+
+    // Generate months for labels (excluding the last boundary)
+    const monthTicks = monthBoundaries.slice(0, -1)
+
+    // Add labels at the start of each month (left-aligned with small offset)
+    axisGroup.selectAll('.tick-label')
+      .data(monthTicks)
+      .enter()
+      .append('text')
+      .attr('class', 'tick-label')
+      .attr('x', d => xScale(d) + 5)
+      .attr('y', 9)
+      .attr('dy', '0.71em')
+      .attr('text-anchor', 'start')
       .style('fill', '#ffffff')
+      .text(d => d3.timeFormat('%b %Y')(d))
     
-    // Quantitative bars
+    // Quantitative bars - handle both positive and negative values
     g.selectAll('.bar')
-      .data(sampleData)
+      .data(sampleData.value)
       .enter()
       .append('rect')
       .attr('class', 'bar')
       .attr('x', d => xScale(d.timestamp) - 15)
-      .attr('y', d => yScale(d.count))
+      .attr('y', d => d.count >= 0 ? yScale(d.count) : yScale(0))
       .attr('width', 30)
-      .attr('height', d => height - yScale(d.count))
+      .attr('height', d => Math.abs(yScale(d.count) - yScale(0)))
       .attr('fill', d => d.color)
       .attr('opacity', 0.7)
       .style('cursor', 'pointer')
@@ -249,31 +329,36 @@
         hideTooltip()
       })
     
-    // Qualitative event markers
+    // Qualitative event markers - position on the timeline bar
     g.selectAll('.event-marker')
-      .data(qualitativeEvents)
+      .data(qualitativeEvents.value)
       .enter()
       .append('circle')
       .attr('class', 'event-marker')
       .attr('cx', d => xScale(d.timestamp))
-      .attr('cy', -10)
+      .attr('cy', yScale(0))
       .attr('r', 8)
       .attr('fill', '#ff6b6b')
       .attr('stroke', '#ffffff')
       .attr('stroke-width', 2)
       .style('cursor', 'pointer')
-      .on('click', (event, d) => {
-        showEventModal(d)
+      .on('mouseover', function(event, d) {
+        d3.select(this).attr('r', 10)
+        showEventTooltip(event, d)
       })
-    
-    // Event labels
+      .on('mouseout', function() {
+        d3.select(this).attr('r', 8)
+        hideTooltip()
+      })
+
+    // Event labels - position above the timeline bar
     g.selectAll('.event-label')
-      .data(qualitativeEvents)
+      .data(qualitativeEvents.value)
       .enter()
       .append('text')
       .attr('class', 'event-label')
       .attr('x', d => xScale(d.timestamp))
-      .attr('y', -20)
+      .attr('y', yScale(0) - 15)
       .attr('text-anchor', 'middle')
       .attr('fill', '#ffffff')
       .attr('font-size', '12px')
@@ -342,31 +427,50 @@
   
   // Tooltip functions
   function showTooltip(event, data) {
-    const tooltip = d3.select('body')
+    d3.select('body')
       .append('div')
       .attr('class', 'tooltip')
-      .style('position', 'absolute')
-      .style('background', 'rgba(0, 0, 0, 0.8)')
+      .style('position', 'fixed')
+      .style('background', 'rgba(0, 0, 0, 0.9)')
       .style('color', '#fff')
       .style('padding', '10px')
       .style('border-radius', '5px')
       .style('pointer-events', 'none')
-      .style('left', `${event.pageX + 10}px`)
-      .style('top', `${event.pageY - 10}px`)
+      .style('z-index', '9999')
+      .style('max-width', '250px')
+      .style('left', `${event.clientX + 10}px`)
+      .style('top', `${event.clientY - 10}px`)
       .html(`
         <strong>${data.label}</strong><br/>
         Count: ${data.count}<br/>
         Date: ${data.timestamp.toLocaleDateString()}
       `)
   }
-  
+
   function hideTooltip() {
     d3.selectAll('.tooltip').remove()
   }
-  
-  function showEventModal(event) {
-    alert(`${event.title}\n\n${event.description}`)
-    // You'd use a proper Vue modal component here
+
+  // Show tooltip for qualitative events
+  function showEventTooltip(event, data) {
+    d3.select('body')
+      .append('div')
+      .attr('class', 'tooltip')
+      .style('position', 'fixed')
+      .style('background', 'rgba(0, 0, 0, 0.9)')
+      .style('color', '#fff')
+      .style('padding', '10px')
+      .style('border-radius', '5px')
+      .style('pointer-events', 'none')
+      .style('z-index', '9999')
+      .style('max-width', '250px')
+      .style('left', `${event.clientX + 10}px`)
+      .style('top', `${event.clientY - 10}px`)
+      .html(`
+        <strong>${data.title}</strong><br/>
+        ${data.description}<br/>
+        Date: ${data.timestamp.toLocaleDateString()}
+      `)
   }
   
   // Handle window resize
@@ -386,15 +490,24 @@
   // Lifecycle hooks
   onMounted(() => {
     initThreeJS()
-    initTimeline()
-    window.addEventListener('resize', onWindowResize)
 
-    // Emit data to parent component
-    emit('data-updated', sampleData)
+    // Load data from JSON file
+    loadData()
+
+    // Use ResizeObserver to watch for container size changes
+    resizeObserver = new ResizeObserver(() => {
+      onWindowResize()
+    })
+
+    if (threeContainer.value) {
+      resizeObserver.observe(threeContainer.value)
+    }
   })
 
   onUnmounted(() => {
-    window.removeEventListener('resize', onWindowResize)
+    if (resizeObserver) {
+      resizeObserver.disconnect()
+    }
     renderer.dispose()
     controls.dispose()
   })
@@ -409,10 +522,12 @@
   .visualization-container {
     position: relative;
     width: 100%;
+    max-width: 100%;
     height: 65vh;
     min-height: 500px;
     overflow: hidden;
     flex-shrink: 0;
+    box-sizing: border-box;
   }
   
   .three-container {

@@ -1,0 +1,61 @@
+{
+  "data": [
+    {
+      "timestamp": "2024-01-7",
+      "x": -50,
+      "y": 10,
+      "z": 0,
+      "color": "#ff6b6b",
+      "count": 145,
+      "label": "Group A Discovered"
+    },
+    {
+      "timestamp": "2024-01-7",
+      "x": -25,
+      "y": 25,
+      "z": 10,
+      "color": "#4ecdc4",
+      "count": -100,
+      "label": "Group A Resolved"
+    },
+    {
+      "timestamp": "2024-03-15",
+      "x": 0,
+      "y": 15,
+      "z": -10,
+      "color": "#45b7d1",
+      "count": 203,
+      "label": "Server Group A"
+    },
+    {
+      "timestamp": "2024-04-20",
+      "x": 25,
+      "y": 30,
+      "z": 5,
+      "color": "#f7b731",
+      "count": 156,
+      "label": "Server Group C"
+    },
+    {
+      "timestamp": "2024-05-10",
+      "x": 50,
+      "y": 20,
+      "z": -5,
+      "color": "#5f27cd",
+      "count": 189,
+      "label": "Server Group B"
+    }
+  ],
+  "events": [
+    {
+      "timestamp": "2024-02-15",
+      "title": "New SLA Policy",
+      "description": "24hr response time for critical findings"
+    },
+    {
+      "timestamp": "2024-04-01",
+      "title": "Company Acquisition",
+      "description": "Merged TechCorp infrastructure"
+    }
+  ]
+}
