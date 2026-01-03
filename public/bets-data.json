@@ -1,0 +1,76 @@
+{
+  "data": [
+    {
+      "timestamp": "2024-01-20",
+      "x": -60,
+      "y": 8,
+      "z": -20,
+      "color": "#e74c3c",
+      "count": 80,
+      "label": "AI Integration Bet",
+      "size": 8,
+      "shape": "torus"
+    },
+    {
+      "timestamp": "2024-02-18",
+      "x": -30,
+      "y": 15,
+      "z": -15,
+      "color": "#8e44ad",
+      "count": 120,
+      "label": "Mobile App Launch",
+      "size": 12,
+      "shape": "cylinder"
+    },
+    {
+      "timestamp": "2024-03-22",
+      "x": 10,
+      "y": 20,
+      "z": -10,
+      "color": "#16a085",
+      "count": 95,
+      "label": "Cloud Migration",
+      "size": 9.5,
+      "shape": "cone"
+    },
+    {
+      "timestamp": "2024-04-28",
+      "x": 35,
+      "y": 25,
+      "z": -5,
+      "color": "#d35400",
+      "count": 110,
+      "label": "API Marketplace",
+      "size": 11,
+      "shape": "tetrahedron"
+    },
+    {
+      "timestamp": "2024-05-15",
+      "x": 60,
+      "y": 18,
+      "z": 0,
+      "color": "#c0392b",
+      "count": 140,
+      "label": "International Expansion",
+      "size": 14,
+      "shape": "dodecahedron"
+    }
+  ],
+  "events": [
+    {
+      "timestamp": "2024-01-10",
+      "title": "Q1 Strategy Meeting",
+      "description": "Executive team defined key strategic bets for the year"
+    },
+    {
+      "timestamp": "2024-03-01",
+      "title": "Budget Allocation",
+      "description": "Resources allocated to top priority bets"
+    },
+    {
+      "timestamp": "2024-05-01",
+      "title": "Mid-Year Review",
+      "description": "Progress assessment on all strategic initiatives"
+    }
+  ]
+}

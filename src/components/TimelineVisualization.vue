@@ -1,6 +1,16 @@
 <!-- TimelineVisualization.vue -->
 <template>
     <div class="visualization-container">
+      <!-- Data Source Selector -->
+      <div class="data-selector">
+        <label for="data-source">Data Source:</label>
+        <select id="data-source" v-model="selectedDataSource" @change="onDataSourceChange">
+          <option value="vuln-data.json">Vulns</option>
+          <option value="onboarding-data.json">Onboarding</option>
+          <option value="bets-data.json">Bets</option>
+        </select>
+      </div>
+
       <!-- Camera controls -->
       <div class="camera-controls">
         <button class="reset-button" @click="resetCamera">Reset</button>
@@ -55,6 +65,9 @@
   // Timeline zoom state
   const timelineZoom = ref(1)
 
+  // Selected data source
+  const selectedDataSource = ref('vuln-data.json')
+
   // Data will be loaded from JSON file
   const sampleData = ref([])
   const qualitativeEvents = ref([])
@@ -62,7 +75,7 @@
   // Load data from JSON file
   async function loadData() {
     try {
-      const response = await fetch('/data.json')
+      const response = await fetch(`/${selectedDataSource.value}`)
       const jsonData = await response.json()
 
       // Parse timestamps as Date objects
@@ -90,6 +103,40 @@
       // Fallback to sample data if file not found
       useFallbackData()
     }
+  }
+
+  // Handle data source change
+  function onDataSourceChange() {
+    // Clear existing data points from scene
+    dataPoints.forEach(point => {
+      scene.remove(point)
+      if (point.geometry) point.geometry.dispose()
+      if (point.material) point.material.dispose()
+    })
+    dataPoints = []
+
+    // Remove all sprites (labels) from scene
+    const spritesToRemove = []
+    scene.children.forEach(child => {
+      if (child instanceof THREE.Sprite) {
+        spritesToRemove.push(child)
+      }
+    })
+    spritesToRemove.forEach(sprite => {
+      scene.remove(sprite)
+      if (sprite.material.map) sprite.material.map.dispose()
+      sprite.material.dispose()
+    })
+
+    // Clear timeline
+    d3.select(timelineSvg.value).selectAll('*').remove()
+
+    // Reset camera
+    camera.position.set(DEFAULT_CAMERA_POSITION.x, DEFAULT_CAMERA_POSITION.y, DEFAULT_CAMERA_POSITION.z)
+    controls.target.set(DEFAULT_CAMERA_TARGET.x, DEFAULT_CAMERA_TARGET.y, DEFAULT_CAMERA_TARGET.z)
+
+    // Reload data
+    loadData()
   }
 
   // Fallback sample data
@@ -693,6 +740,55 @@
     overflow: hidden;
     flex-shrink: 0;
     box-sizing: border-box;
+  }
+
+  .data-selector {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(26, 26, 26, 0.9);
+    padding: 10px 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  .data-selector label {
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .data-selector select {
+    background: rgba(78, 205, 196, 0.2);
+    color: #ffffff;
+    border: 2px solid rgba(78, 205, 196, 0.5);
+    border-radius: 5px;
+    padding: 8px 12px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    outline: none;
+  }
+
+  .data-selector select:hover {
+    background: rgba(78, 205, 196, 0.3);
+    border-color: rgba(78, 205, 196, 0.8);
+  }
+
+  .data-selector select:focus {
+    background: rgba(78, 205, 196, 0.4);
+    border-color: #4ecdc4;
+    box-shadow: 0 0 0 2px rgba(78, 205, 196, 0.2);
+  }
+
+  .data-selector select option {
+    background: #1a1a1a;
+    color: #ffffff;
   }
 
   .camera-controls {

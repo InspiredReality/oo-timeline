@@ -1,0 +1,76 @@
+{
+  "data": [
+    {
+      "timestamp": "2024-01-15",
+      "x": -40,
+      "y": 12,
+      "z": 20,
+      "color": "#9b59b6",
+      "count": 50,
+      "label": "Initial Training",
+      "size": 5,
+      "shape": "sphere"
+    },
+    {
+      "timestamp": "2024-02-10",
+      "x": -20,
+      "y": 18,
+      "z": 15,
+      "color": "#3498db",
+      "count": 75,
+      "label": "System Access Granted",
+      "size": 7.5,
+      "shape": "box"
+    },
+    {
+      "timestamp": "2024-03-05",
+      "x": 0,
+      "y": 22,
+      "z": 10,
+      "color": "#2ecc71",
+      "count": 100,
+      "label": "First Task Completed",
+      "size": 10,
+      "shape": "dodecahedron"
+    },
+    {
+      "timestamp": "2024-04-12",
+      "x": 20,
+      "y": 28,
+      "z": 5,
+      "color": "#f39c12",
+      "count": 90,
+      "label": "Peer Review",
+      "size": 9,
+      "shape": "octahedron"
+    },
+    {
+      "timestamp": "2024-05-20",
+      "x": 40,
+      "y": 25,
+      "z": 0,
+      "color": "#1abc9c",
+      "count": 120,
+      "label": "Onboarding Complete",
+      "size": 12,
+      "shape": "icosahedron"
+    }
+  ],
+  "events": [
+    {
+      "timestamp": "2024-02-01",
+      "title": "Orientation Day",
+      "description": "Company-wide orientation and welcome session"
+    },
+    {
+      "timestamp": "2024-03-15",
+      "title": "Mentor Assigned",
+      "description": "Assigned senior team member as mentor"
+    },
+    {
+      "timestamp": "2024-05-01",
+      "title": "90-Day Review",
+      "description": "Performance review and feedback session"
+    }
+  ]
+}
