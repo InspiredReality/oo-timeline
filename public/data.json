@@ -7,16 +7,19 @@
       "z": 0,
       "color": "#ff6b6b",
       "count": 145,
-      "label": "Group A Discovered"
+      "label": "Group A Discovered",
+      "size": 14.5
+
     },
     {
       "timestamp": "2024-01-7",
-      "x": -25,
-      "y": 25,
-      "z": 10,
+      "x": -50,
+      "y": 10,
+      "z": 0,
       "color": "#4ecdc4",
       "count": -100,
-      "label": "Group A Resolved"
+      "label": "Group A Resolved",
+      "size": 10
     },
     {
       "timestamp": "2024-03-15",
@@ -25,7 +28,8 @@
       "z": -10,
       "color": "#45b7d1",
       "count": 203,
-      "label": "Server Group A"
+      "label": "Server Group A",
+      "size": 2
     },
     {
       "timestamp": "2024-04-20",
@@ -34,7 +38,8 @@
       "z": 5,
       "color": "#f7b731",
       "count": 156,
-      "label": "Server Group C"
+      "label": "Server Group C",
+      "size": 3
     },
     {
       "timestamp": "2024-05-10",

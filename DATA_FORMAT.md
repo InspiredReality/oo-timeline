@@ -16,7 +16,9 @@ The data file should be a JSON object with two arrays: `data` and `events`.
       "z": 0,
       "color": "#ff6b6b",
       "count": 145,
-      "label": "Server Group A"
+      "label": "Server Group A",
+      "shape": "sphere",
+      "size": 2
     }
   ],
   "events": [
@@ -40,8 +42,22 @@ The data file should be a JSON object with two arrays: `data` and `events`.
 | `y` | number | Y coordinate in 3D space |
 | `z` | number | Z coordinate in 3D space |
 | `color` | string | Hex color code (e.g., "#ff6b6b") |
-| `count` | number | Quantitative value for timeline bar height |
+| `count` | number | Quantitative value for timeline bar height (can be negative) |
 | `label` | string | Display name/category for the data point |
+| `shape` | string | (Optional) Shape of the 3D object. Default: "sphere" |
+| `size` | number | (Optional) Size of the 3D object. Default: 2 |
+
+#### Available Shapes
+
+- `sphere` - Spherical object (default)
+- `box` or `cube` - Cubic object
+- `cone` - Conical object
+- `cylinder` - Cylindrical object
+- `torus` - Donut/ring shaped object
+- `octahedron` - 8-sided polyhedron
+- `tetrahedron` - 4-sided polyhedron (pyramid)
+- `dodecahedron` - 12-sided polyhedron
+- `icosahedron` - 20-sided polyhedron
 
 ### Events
 
@@ -54,7 +70,7 @@ The data file should be a JSON object with two arrays: `data` and `events`.
 ## Features
 
 ### Data Points
-- Displayed as spheres in the 3D visualization
+- Displayed as 3D objects in the visualization (shape and size customizable)
 - Shown as bars on the timeline
 - Listed in the data table with full details
 - Clickable in both table and timeline to animate camera focus

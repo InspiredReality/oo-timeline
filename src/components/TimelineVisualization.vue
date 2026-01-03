@@ -1,12 +1,29 @@
 <!-- TimelineVisualization.vue -->
 <template>
     <div class="visualization-container">
+      <!-- Camera controls -->
+      <div class="camera-controls">
+        <button class="reset-button" @click="resetCamera">Reset</button>
+        <div class="rotation-buttons">
+          <button class="rotate-button" @click="rotateCamera('x', 90)" title="Rotate up">^</button>
+          <button class="rotate-button" @click="rotateCamera('x', -90)" title="Rotate down">v</button>
+          <button class="rotate-button" @click="rotateCamera('y', -90)" title="Rotate right">&lt;</button>
+          <button class="rotate-button" @click="rotateCamera('y', 90)" title="Rotate left">&gt;</button>
+        </div>
+      </div>
+
       <!-- Three.js canvas -->
       <div ref="threeContainer" class="three-container"></div>
-      
+
       <!-- D3 Timeline overlay -->
-      <div ref="timelineContainer" class="timeline-overlay">
-        <svg ref="timelineSvg"></svg>
+      <div class="timeline-overlay">
+        <div class="timeline-controls">
+          <button class="zoom-button" @click="zoomInTimeline">+</button>
+          <button class="zoom-button" @click="zoomOutTimeline">-</button>
+        </div>
+        <div ref="timelineContainer" class="timeline-scroll-container">
+          <svg ref="timelineSvg"></svg>
+        </div>
       </div>
     </div>
   </template>
@@ -30,6 +47,13 @@
   let scene, camera, renderer, controls
   let dataPoints = []
   let resizeObserver = null
+
+  // Default camera settings
+  const DEFAULT_CAMERA_POSITION = { x: 0, y: 30, z: 80 }
+  const DEFAULT_CAMERA_TARGET = { x: 0, y: 0, z: 0 }
+
+  // Timeline zoom state
+  const timelineZoom = ref(1)
 
   // Data will be loaded from JSON file
   const sampleData = ref([])
@@ -176,24 +200,60 @@
   // Create 3D objects from data
   function createDataPoints() {
     sampleData.value.forEach(data => {
-      // Sphere geometry
-      const geometry = new THREE.SphereGeometry(2, 32, 32)
+      // Get shape and size from data, with defaults
+      const shape = data.shape || 'sphere'
+      const size = data.size || 2
+
+      // Create geometry based on shape
+      let geometry
+      switch (shape.toLowerCase()) {
+        case 'box':
+        case 'cube':
+          geometry = new THREE.BoxGeometry(size, size, size)
+          break
+        case 'cone':
+          geometry = new THREE.ConeGeometry(size, size * 2, 32)
+          break
+        case 'cylinder':
+          geometry = new THREE.CylinderGeometry(size, size, size * 2, 32)
+          break
+        case 'torus':
+          geometry = new THREE.TorusGeometry(size, size * 0.4, 16, 100)
+          break
+        case 'octahedron':
+          geometry = new THREE.OctahedronGeometry(size)
+          break
+        case 'tetrahedron':
+          geometry = new THREE.TetrahedronGeometry(size)
+          break
+        case 'dodecahedron':
+          geometry = new THREE.DodecahedronGeometry(size)
+          break
+        case 'icosahedron':
+          geometry = new THREE.IcosahedronGeometry(size)
+          break
+        case 'sphere':
+        default:
+          geometry = new THREE.SphereGeometry(size, 32, 32)
+          break
+      }
+
       const material = new THREE.MeshStandardMaterial({
         color: data.color,
         emissive: data.color,
         emissiveIntensity: 0.3
       })
-      const sphere = new THREE.Mesh(geometry, material)
-      
+      const mesh = new THREE.Mesh(geometry, material)
+
       // Position based on data
-      sphere.position.set(data.x, data.y, data.z)
-      
+      mesh.position.set(data.x, data.y, data.z)
+
       // Store reference to data
-      sphere.userData = data
-      
-      scene.add(sphere)
-      dataPoints.push(sphere)
-      
+      mesh.userData = data
+
+      scene.add(mesh)
+      dataPoints.push(mesh)
+
       // Add label
       createLabel(data)
     })
@@ -229,11 +289,9 @@
   
   // Initialize D3 Timeline
   function initTimeline() {
-    const margin = { top: 20, right: 50, bottom: 30, left: 50 }
-    // Make timeline wider for scrolling - use a minimum width that's larger than viewport
-    const minTimelineWidth = 1500
+    const margin = { top: 20, right: 50, bottom: 30, left: 100 }
     const containerWidth = timelineContainer.value.clientWidth - margin.left - margin.right
-    const width = Math.max(minTimelineWidth, containerWidth)
+    const width = containerWidth * timelineZoom.value
     const height = 150 - margin.top - margin.bottom
 
     const svg = d3.select(timelineSvg.value)
@@ -285,7 +343,7 @@
       .attr('x1', d => xScale(d))
       .attr('x2', d => xScale(d))
       .attr('y1', -5)
-      .attr('y2', 25)
+      .attr('y2', 5)
       .attr('stroke', '#666')
 
     // Generate months for labels (excluding the last boundary)
@@ -367,39 +425,146 @@
   
   // Animate Three.js camera to selected data point
   function animateCameraToPoint(data) {
-    // Target position (slightly offset from point for better view)
-    const targetPosition = {
-      x: data.x + 20,
-      y: data.y + 15,
-      z: data.z + 30
-    }
-    
-    // Target to look at (the actual data point)
-    const lookAtTarget = new THREE.Vector3(data.x, data.y, data.z)
-    
+    // Calculate current viewing direction (from camera to current target)
+    const currentTarget = controls.target.clone()
+    const currentDirection = new THREE.Vector3()
+      .subVectors(camera.position, currentTarget)
+
+    // New target is the data point
+    const newTarget = new THREE.Vector3(data.x, data.y, data.z)
+
+    // Calculate new camera position maintaining the same viewing angle
+    const newCameraPosition = new THREE.Vector3()
+      .addVectors(newTarget, currentDirection)
+
     // Disable controls during animation
     controls.enabled = false
-    
-    // Animate camera position
+
+    // Animate both camera position and controls target
     gsap.to(camera.position, {
-      x: targetPosition.x,
-      y: targetPosition.y,
-      z: targetPosition.z,
+      x: newCameraPosition.x,
+      y: newCameraPosition.y,
+      z: newCameraPosition.z,
+      duration: 1.5,
+      ease: 'power2.inOut'
+    })
+
+    gsap.to(controls.target, {
+      x: newTarget.x,
+      y: newTarget.y,
+      z: newTarget.z,
       duration: 1.5,
       ease: 'power2.inOut',
-      onUpdate: () => {
-        camera.lookAt(lookAtTarget)
-      },
       onComplete: () => {
-        controls.target.copy(lookAtTarget)
         controls.enabled = true
       }
     })
-    
+
     // Highlight the selected sphere
     highlightDataPoint(data)
   }
-  
+
+  // Zoom in timeline
+  function zoomInTimeline() {
+    timelineZoom.value = Math.min(timelineZoom.value + 0.5, 5)
+    d3.select(timelineSvg.value).selectAll('*').remove()
+    initTimeline()
+  }
+
+  // Zoom out timeline
+  function zoomOutTimeline() {
+    timelineZoom.value = Math.max(timelineZoom.value - 0.5, 0.2)
+    d3.select(timelineSvg.value).selectAll('*').remove()
+    initTimeline()
+  }
+
+  // Rotate camera around target
+  function rotateCamera(axis, degrees) {
+    const currentTarget = controls.target.clone()
+    const currentPosition = camera.position.clone()
+
+    // Calculate relative position from target
+    const relativePosition = new THREE.Vector3().subVectors(currentPosition, currentTarget)
+
+    // Convert to spherical coordinates for reliable rotation
+    const spherical = new THREE.Spherical()
+    spherical.setFromVector3(relativePosition)
+
+    // Create rotation based on axis
+    const radians = THREE.MathUtils.degToRad(degrees)
+
+    if (axis === 'x') {
+      // For X-axis rotation, modify the phi angle (vertical rotation)
+      spherical.phi -= radians
+      // Clamp phi to prevent flipping at poles
+      spherical.phi = Math.max(0.01, Math.min(Math.PI - 0.01, spherical.phi))
+    } else if (axis === 'y') {
+      // For Y-axis rotation, modify the theta angle (horizontal rotation)
+      spherical.theta += radians
+    }
+
+    // Convert back to Cartesian coordinates
+    const newRelativePosition = new THREE.Vector3().setFromSpherical(spherical)
+    const newPosition = new THREE.Vector3().addVectors(currentTarget, newRelativePosition)
+
+    // Disable controls during animation
+    controls.enabled = false
+
+    // Animate to new position
+    gsap.to(camera.position, {
+      x: newPosition.x,
+      y: newPosition.y,
+      z: newPosition.z,
+      duration: 1.0,
+      ease: 'power2.inOut',
+      onComplete: () => {
+        controls.enabled = true
+      }
+    })
+  }
+
+  // Reset camera to default position and angle
+  function resetCamera() {
+    // Disable controls during animation
+    controls.enabled = false
+
+    // Animate camera back to default position
+    gsap.to(camera.position, {
+      x: DEFAULT_CAMERA_POSITION.x,
+      y: DEFAULT_CAMERA_POSITION.y,
+      z: DEFAULT_CAMERA_POSITION.z,
+      duration: 1.5,
+      ease: 'power2.inOut'
+    })
+
+    // Animate controls target back to origin
+    gsap.to(controls.target, {
+      x: DEFAULT_CAMERA_TARGET.x,
+      y: DEFAULT_CAMERA_TARGET.y,
+      z: DEFAULT_CAMERA_TARGET.z,
+      duration: 1.5,
+      ease: 'power2.inOut',
+      onComplete: () => {
+        controls.enabled = true
+      }
+    })
+
+    // Reset all sphere highlights
+    dataPoints.forEach(point => {
+      gsap.to(point.material, {
+        emissiveIntensity: 0.3,
+        duration: 0.5
+      })
+      gsap.to(point.scale, {
+        x: 1,
+        y: 1,
+        z: 1,
+        duration: 0.5,
+        ease: 'elastic.out(1, 0.3)'
+      })
+    })
+  }
+
   // Highlight selected data point
   function highlightDataPoint(data) {
     // Reset all spheres
@@ -529,7 +694,74 @@
     flex-shrink: 0;
     box-sizing: border-box;
   }
-  
+
+  .camera-controls {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .reset-button {
+    padding: 10px 20px;
+    background: rgba(78, 205, 196, 0.9);
+    color: #1a1a1a;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  .reset-button:hover {
+    background: rgba(78, 205, 196, 1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(78, 205, 196, 0.4);
+  }
+
+  .reset-button:active {
+    transform: translateY(0);
+  }
+
+  .rotation-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+  }
+
+  .rotate-button {
+    width: 36px;
+    height: 36px;
+    background: rgba(78, 205, 196, 0.9);
+    color: #1a1a1a;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+
+  .rotate-button:hover {
+    background: rgba(78, 205, 196, 1);
+    transform: scale(1.1);
+    box-shadow: 0 3px 6px rgba(78, 205, 196, 0.4);
+  }
+
+  .rotate-button:active {
+    transform: scale(0.95);
+  }
+
   .three-container {
     position: absolute;
     top: 0;
@@ -548,24 +780,66 @@
     border-top: 2px solid #444;
     padding: 10px 0;
     z-index: 10;
+    display: flex;
+    align-items: center;
+  }
+
+  .timeline-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 0 10px;
+    flex-shrink: 0;
+  }
+
+  .timeline-scroll-container {
+    flex: 1;
     overflow-x: auto;
     overflow-y: hidden;
   }
 
-  .timeline-overlay::-webkit-scrollbar {
+  .zoom-button {
+    width: 32px;
+    height: 32px;
+    background: rgba(78, 205, 196, 0.9);
+    color: #1a1a1a;
+    border: none;
+    border-radius: 4px;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+
+  .zoom-button:hover {
+    background: rgba(78, 205, 196, 1);
+    transform: scale(1.1);
+    box-shadow: 0 3px 6px rgba(78, 205, 196, 0.4);
+  }
+
+  .zoom-button:active {
+    transform: scale(0.95);
+  }
+
+  .timeline-scroll-container::-webkit-scrollbar {
     height: 8px;
   }
 
-  .timeline-overlay::-webkit-scrollbar-track {
+  .timeline-scroll-container::-webkit-scrollbar-track {
     background: rgba(0, 0, 0, 0.3);
   }
 
-  .timeline-overlay::-webkit-scrollbar-thumb {
+  .timeline-scroll-container::-webkit-scrollbar-thumb {
     background: #4ecdc4;
     border-radius: 4px;
   }
 
-  .timeline-overlay::-webkit-scrollbar-thumb:hover {
+  .timeline-scroll-container::-webkit-scrollbar-thumb:hover {
     background: #45b7d1;
   }
   
